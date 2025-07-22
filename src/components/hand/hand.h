@@ -85,13 +85,18 @@ namespace Hand {
     public:
         sml::sm<HandSM> sm;
 
+        // Data for the currently tracked object
+        tracking_data_t current_target;
+        // Center of the camera's region of interest
+        point_t screen_center;
+
+        Hand();
+
         bool setup();
         void update();
+
+        // Action to store tracking data for the detected object
+        void lockon_target(const object_detected& event);
     };
 };
-
-
-
-
-
 

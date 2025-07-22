@@ -3,10 +3,11 @@
 #include "components/hand/events.h"
 
 namespace Hand {
+    class Hand; // Forward declaration
+
     namespace HandStateActions {
         using namespace HandStateEvents;
 
-        void hand_lockon_target(const object_detected& event);
 
         void hand_move_up(const move_up &event);
         void hand_move_down(const move_down &event);
@@ -21,10 +22,13 @@ namespace Hand {
         
         void hand_stop_all();
 
+        void hand_lockon_target(const object_detected& event, Hand& hand);
+
         // Define actions
         auto no_action      = [] {};
         
-        auto lockon_target_action = [](const object_detected& e) { hand_lockon_target(e); };
+        auto lockon_target_action = [](const object_detected& e, Hand& hand) { hand_lockon_target(e, hand); };
+        
 
         auto move_up_action = [](const move_up &e){ hand_move_up(e); };
         auto move_down_action = [](const move_down &e){ hand_move_down(e); };

@@ -29,12 +29,24 @@ namespace Hand {
     // State Machine setup & update
     ///////////////////////////////////
 
+    Hand::Hand() : sm{*this} {}
+
     bool Hand::setup(){
         log_setup();
 
+        // Initialize screen center based on camera resolution (QVGA: 320x240)
+        this->screen_center = {160, 120};
+
         // Start the state machine cycle
         sm.process_event(start_cycle{});
+
+        log_i("Hand component ready");
         return true;
+    }
+
+    void Hand::lockon_target(const object_detected& event) {
+        log_d("ACTION: Locking on target at x:%d, y:%d", event.tracking_info.x, event.tracking_info.y);
+        this->current_target = event.tracking_info;
     }
 
     void Hand::update(){
@@ -50,43 +62,59 @@ namespace Hand {
 
         } else if (sm.is("Searching"_s)) {
             log_d("State: Searching");
-            blink_sequence_start(BlinkSequence_SEARCH);
-            
-            // camera_fb_t* fb = camera_get_frame();
-            // if (!fb) {
-            //     log_d("Camera frame capture failed");
-            //     return;
-            // }
-            // if (is_target_object(fb)) {
-            //     sm.process_event(object_detected{});
-            // } else {
-            //     // No object found, stay in searching state
-            // }
-            // camera_return_frame(fb); // Return frame buffer
 
-            delay(1000 * 10);
+            camera_fb_t *fb = camera_get_frame();
+            if (!fb) {
+                log_e("Camera frame capture failed");
+                return;
+            }
 
-            log_i("Detected object");
-            sm.process_event(object_detected{});
+            tracking_data_t tracking_info;
+            object_metrics_t metrics = find_best_object(fb, &tracking_info);
 
+            camera_return_frame(fb);
+
+            // If a valid object with a high enough score is found, lock on.
+            if (metrics.is_valid && metrics.signature_score > 0.8f) {
+                sm.process_event(object_detected{tracking_info});
+            }
 
         } else if (sm.is("Aligning"_s)) {
             log_d("State: Aligning");
 
-            // The align_robot action was already called. Here, we would check
-            // if the alignment is complete. This could be time-based or sensor-based.
-            // For this example, we'll assume it's complete after a short delay.
-            delay(1000 * 10);
-            sm.process_event(move_up{});
-            delay(1000 * 10);
-            sm.process_event(move_down{});
-            delay(1000 * 10);
-            sm.process_event(move_left{});
-            delay(1000 * 10);
-            sm.process_event(move_right{});
-            delay(1000 * 10);
+            camera_fb_t *fb = camera_get_frame();
+            if (!fb) {
+                log_e("Camera frame capture failed");
+                return;
+            }
 
-            sm.process_event(alignment_complete{});
+            object_metrics_t metrics = track_object(fb, &this->current_target);
+            camera_return_frame(fb);
+
+            if (!metrics.is_valid) {
+                sm.process_event(object_lost{});
+                return;
+            }
+
+            // Define a tolerance for centering
+            const int tolerance = 10; // pixels
+            int dx = metrics.centroid.x - this->screen_center.x;
+            int dy = metrics.centroid.y - this->screen_center.y;
+
+            // Check if the object is centered
+            if (abs(dx) <= tolerance && abs(dy) <= tolerance) {
+                log_i("Object is centered. Alignment complete.");
+                sm.process_event(alignment_complete{});
+            } else {
+                // Issue move commands based on the largest error
+                if (abs(dx) > abs(dy)) {
+                    if (dx > 0) sm.process_event(move_left{});
+                    else sm.process_event(move_right{});
+                } else {
+                    if (dy > 0) sm.process_event(move_up{});
+                    else sm.process_event(move_down{});
+                }
+            }
 
         } else if (sm.is("Extending"_s)) {
             log_d("State: Extending");

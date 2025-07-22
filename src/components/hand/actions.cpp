@@ -3,14 +3,16 @@
 #include "utils/macros.h"
 
 #include "components/hand/events.h"
+#include "components/hand/hand.h"
 
 namespace Hand {
     namespace HandStateActions {
 
-        void hand_lockon_target(const object_detected &event) {
-            log_d("ACTION: Aligning robot...");
-            blink_sequence_start(BlinkSequence_LOCK);
+        void hand_lockon_target(const object_detected &event, Hand& hand) {
+            log_d("ACTION: Locking on target via free function...");
+            hand.lockon_target(event);
         }
+
 
         void hand_move_up(const move_up &event) {
             log_d("ACTION: Move up %d\n", event.amount);

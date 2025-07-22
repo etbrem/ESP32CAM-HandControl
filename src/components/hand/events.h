@@ -1,4 +1,5 @@
 #pragma once
+#include "video/object_analysis.h"
 
 namespace Hand {
     namespace HandStateEvents {
@@ -9,7 +10,7 @@ namespace Hand {
         struct start_cycle {};
 
         struct object_detected {
-            void *data; /* TODO: */
+            tracking_data_t tracking_info;
         };
         struct object_lost {};
 
