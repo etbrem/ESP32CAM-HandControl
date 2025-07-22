@@ -1,0 +1,88 @@
+/*
+
+TODO:
+
+make the states into a .list macro preprocessor thing
+
+then blink sequences can be automatic
+
+led to guide a hand
+
+
+///////////////////////////////////
+// State machine definition
+///////////////////////////////////
+
+return make_transition_table(
+    //  Current State     + Event                 [Guard]              / Action                = Next State
+    //-----------------------------------------------------------------------------------------------------------
+    *"Idle"_s          + event<start_cycle>                         / noop_action          = "Searching"_s,
+    "Searching"_s     + event<object_detected>                     / lockon_target_action          = "Aligning"_s,
+    "Searching"_s     + event<reset>                               / stop_action           = "Idle"_s,
+    "Aligning"_s      + event<alignment_complete>  [centered_guard]  / extend_action         = "Extending"_s,
+    "Aligning"_s      + event<object_lost>                         / noop_action           = "Searching"_s,
+    "Aligning"_s      + event<reset>                               / stop_action           = "Idle"_s,
+    "Extending"_s     + event<contact_made>                        / close_action          = "Grasping"_s,
+    "Extending"_s     + event<object_lost>                         / noop_action           = "Searching"_s,
+    "Extending"_s     + event<reset>                               / stop_action           = "Idle"_s,
+    "Grasping"_s      + event<grasp_complete>                      / retract_action        = "Retracting"_s,
+    "Grasping"_s      + event<reset>                               / stop_action           = "Idle"_s,
+    "Retracting"_s    + event<retraction_complete>                 / open_action           = "Releasing"_s,
+    "Retracting"_s    + event<reset>                               / stop_action           = "Idle"_s,
+    "Releasing"_s     + event<release_complete>                    / noop_action           = "Idle"_s
+);
+
+//  Current State     + Event                 [Guard]              / Action                = Next State
+//-----------------------------------------------------------------------------------------------------------
+"Idle"_s          + event<start_cycle>                         / noop_action          = "Searching"_s,
+"Searching"_s     + event<object_detected>                     / lockon_target_action          = "Aligning"_s,
+"Searching"_s     + event<reset>                               / stop_action           = "Idle"_s,
+"Aligning"_s      + event<alignment_complete>  [centered_guard]  / extend_action         = "Extending"_s,
+"Aligning"_s      + event<object_lost>                         / noop_action           = "Searching"_s,
+"Aligning"_s      + event<reset>                               / stop_action           = "Idle"_s,
+"Extending"_s     + event<contact_made>                        / close_action          = "Grasping"_s,
+"Extending"_s     + event<object_lost>                         / noop_action           = "Searching"_s,
+"Extending"_s     + event<reset>                               / stop_action           = "Idle"_s,
+"Grasping"_s      + event<grasp_complete>                      / retract_action        = "Retracting"_s,
+"Grasping"_s      + event<reset>                               / stop_action           = "Idle"_s,
+"Retracting"_s    + event<retraction_complete>                 / open_action           = "Releasing"_s,
+"Retracting"_s    + event<reset>                               / stop_action           = "Idle"_s,
+"Releasing"_s     + event<release_complete>                    / noop_action           = "Idle"_s
+
+
+STATE(  name,             event,                      guard,                    action,             next  )
+
+*/
+
+
+STATE(  Idle,             start_cycle,                no_guard,                 no_action,                  Searching  )
+
+STATE(  Searching,        object_detected,            no_guard,                 lockon_target_action,       Aligning  )
+STATE(  Searching,        reset,                      no_guard,                 stop_action,                Idle  )
+
+/*
+TODO:
+
+Aligning state should have several events for UP DOWN LEFT RIGHT DEGREES
+*/
+
+STATE(  Aligning,         move_up,                    no_guard,                 move_up_action,             Aligning  )
+STATE(  Aligning,         move_down,                  no_guard,                 move_down_action,           Aligning  )
+STATE(  Aligning,         move_left,                  no_guard,                 move_left_action,           Aligning  )
+STATE(  Aligning,         move_right,                 no_guard,                 move_right_action,          Aligning  )
+
+STATE(  Aligning,         alignment_complete,         centered_guard,           extend_action,              Extending  )
+STATE(  Aligning,         object_lost,                no_guard,                 no_action,                  Searching  )
+STATE(  Aligning,         reset,                      no_guard,                 stop_action,                Idle  )
+
+STATE(  Extending,        contact_made,               no_guard,                 close_action,               Grasping  )
+STATE(  Extending,        object_lost,                no_guard,                 no_action,                  Searching  )
+STATE(  Extending,        reset,                      no_guard,                 stop_action,                Idle  )
+
+STATE(  Grasping,         grasp_complete,             no_guard,                 retract_action,             Retracting  )
+STATE(  Grasping,         reset,                      no_guard,                 stop_action,                Idle  )
+
+STATE(  Retracting,       retraction_complete,        no_guard,                 open_action,                Releasing  )
+STATE(  Retracting,       reset,                      no_guard,                 stop_action,                Idle  )
+
+STATE(  Releasing,        release_complete,           no_guard,                 no_action,                  Idle  )

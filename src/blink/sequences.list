@@ -1,0 +1,14 @@
+
+/* SEQuences(name, ...)  represents sequences of intervals of { duration_ms, brightness } */
+
+SEQ(BOOT, 
+    {250, 1}, {250, 2}, {500, 0},
+)
+
+SEQ(IDLE,
+    {500, 2}, {500, 0}, {500, 1}, {4000, 0}, 
+)
+
+SEQ(BUSY,
+    {250, 1}, {250, 0},
+)
