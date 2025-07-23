@@ -81,8 +81,9 @@ void camera_currframe_send_tcp(WiFiClient client) {
 void handleClientTask(void *parameter) {
     WiFiClient *client = (WiFiClient *)parameter;
     
+    log_d("Sending camera stream to client %s", client->remoteIP().toString());
+    
     while (client->connected()) {
-        log_d("Sending camera frame to client %s", client->remoteIP().toString());
         camera_currframe_send_tcp(*client);
         delay(100); // Adjust delay as needed
     }

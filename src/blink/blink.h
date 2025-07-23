@@ -6,12 +6,6 @@
 #include "utils/macros.h"
 
 
-#ifndef BLINK_DISABLE
-///////////////////////////////////
-// Blink - Enabled
-///////////////////////////////////
-
-#include <jled.h>
 
 // Define the built-in LED pin for ESP32-CAM
 #ifndef LED_BUILTIN
@@ -25,6 +19,14 @@ typedef struct _BlinkInterval {
 } BlinkInterval;
 
 typedef BlinkInterval *BlinkSequence;
+
+
+#ifndef BLINK_DISABLE
+///////////////////////////////////
+// Blink - Enabled
+///////////////////////////////////
+
+#include <jled.h>
 
 // Initialize the LED controller
 bool blink_setup();
