@@ -8,7 +8,7 @@
 
 // #include <pixelnova87-project-1-v3/edge-impulse-sdk/classifier/ei_run_classifier.h>
 
-Hand::Hand hand1;
+// Hand::Hand hand1;
 
 void setup() {
     serial_setup(115200); // This must match your monitor_speed
@@ -16,11 +16,14 @@ void setup() {
 
     blink_setup();
     blink_sequence_start(BlinkSequence_BOOT);
+    blink_test();  // If BLINK_TEST is undefined this does nothing
 
     camera_setup();
     network_setup();
-    
-    hand1.setup();
+
+    // hand1.setup();
+
+    blink_sequence_start(BlinkSequence_DARK);
 }
 
 
@@ -28,8 +31,6 @@ void setup() {
 void loop() {
     log_update();
 
-    blink_test();  // If BLINK_TEST is undefined this does nothing
-    
     // Accept new client if one is available
     network_update();
 

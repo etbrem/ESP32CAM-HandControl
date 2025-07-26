@@ -81,6 +81,8 @@ void camera_currframe_send_tcp(WiFiClient client) {
 void handleClientTask(void *parameter) {
     WiFiClient *client = (WiFiClient *)parameter;
     
+    // TODO: Authentication
+    
     log_d("Sending camera stream to client %s", client->remoteIP().toString());
     
     while (client->connected()) {

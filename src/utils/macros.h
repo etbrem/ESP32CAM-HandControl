@@ -25,5 +25,5 @@
     } while (0);
 
 
-#define log_setup()  log_d("SETUP CODE")
-#define log_update(x) log_d("UPDATE CODE")
+#define log_setup()  log_d("Setting up")
+#define log_update(x) log_d("Updating")

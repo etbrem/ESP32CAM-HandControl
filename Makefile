@@ -32,6 +32,7 @@ clean:
 	source "$(VENV)/bin/activate"	&& \
     pio run -e "$(PIO_ENV)" -t clean
 
+# 	TODO: pio init --board esp32cam
 requirements:
 	source "$(VENV)/bin/activate"	&& \
 	pip install jupyter opencv-python

@@ -1,24 +1,55 @@
 import os
+import time
 import socket
 import argparse
-import socket
 import threading
-import time
 
 import numpy as np
 import cv2
 
 import logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 
+
+class MockLock:
+    def acquire(self, *args, **kwargs): pass
+    def release(self): pass
+    def __enter__(self): pass
+    def __exit__(self, exc_type, exc_val, exc_tb): pass
+
+USE_STREAMING_LOCK = False
+STREAM_LOCK = threading.Lock()  if USE_STREAMING_LOCK else  MockLock()
+
+ALL_EVENTS = []
+
+def new_event():
+    event = threading.Event()
+    ALL_EVENTS.append(event)
+    return event
+
+def clear_all_events():
+    while ALL_EVENTS:
+        e = ALL_EVENTS.pop(0)
+        e.clear()
+
+def clear_event_after(event, seconds):
+    def _internal():
+        time.sleep(seconds)
+        event.clear()
+        logger.info(f'Cleared event after {seconds} seconds')
+
+    t = threading.Thread(target=_internal)
+    t.start()
 
 def recv_frame(sock):
     # Read 4 bytes for frame size (little endian)
     size_bytes = sock.recv(4)
+
     if not size_bytes:
         logger.info('Connection closed by peer while reading frame size.')
         return
+
     if len(size_bytes) < 4:
         logger.error(f'Received {len(size_bytes)} bytes for frame size, expected 4. Connection might be unstable or closed.')
         return
@@ -38,73 +69,98 @@ def recv_frame(sock):
 
     return data
 
-def stream_to_ipython(ip, port, delay=0.01):
+def iter_frames(ip, port, delay=0.01):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            logger.debug(f'Connecting to {ip}:{port}')
+            sock.connect((ip, port))
+            logger.info(f'Connected to {ip}:{port}')
+
+            while True:
+                frame = recv_frame(sock)
+
+                if frame is None:
+                    logger.info("Stream loop terminated due to disconnected or bad frame.")
+                    break
+
+                time.sleep(delay) 
+                yield frame
+        finally:
+            sock.close()
+            
+def stream_to_ipython(ip, port):
     import ipywidgets as widgets
     from IPython.display import display
 
     image_widget = widgets.Image(format='jpeg')  # ESP32 sends JPEG
     display(image_widget)
     
-    should_loop = threading.Event()
-    def stream_loop():
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((ip, port))
-            should_loop.set()
+    should_stream = new_event()
+    should_stream.set()
 
-            while should_loop.is_set():
-                frame = recv_frame(sock)
+    def stream_loop():
+        with STREAM_LOCK:
+            frames = iter_frames(ip, port)
+
+            while should_stream.is_set():
+                frame = next(frames)
+
                 if frame is None:
                     logger.info("Stream loop terminated due to disconnected or bad frame.")
                     break
+                
                 image_widget.value = frame
-                time.sleep(delay)
 
     thread = threading.Thread(target=stream_loop)
     thread.start()
-    return should_loop
+    return should_stream
 
 def stream_to_directory(ip, port, directory, prefix='img_', delay=0.1):
     os.makedirs(directory, exist_ok=True)
 
     logger.debug(f'Streaming {ip}:{port} JPEGs into directory {directory}')
 
-    should_loop = threading.Event()
+    should_stream = new_event()
+    should_stream.set()     
+
     def stream_loop():
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((ip, port))
-            should_loop.set()     
+        with STREAM_LOCK:
+            frames = iter_frames(ip, port)
 
             counter = 0   
+            while should_stream.is_set():
+                jpeg_data = next(frames)
 
-            while should_loop.is_set():
-                jpeg_data = recv_frame(s)
                 if jpeg_data is None:
                     logger.info("Stream loop terminated due to disconnected or bad frame.")
                     break
+
                 outfile = os.path.join(directory, f'{prefix}{counter}.jpg')
                 with open(outfile, 'wb') as f:
                     f.write(jpeg_data)
+
                 counter += 1
                 time.sleep(delay)
 
     thread = threading.Thread(target=stream_loop)
     thread.start()
-    return should_loop
+    return should_stream
 
 def stream_to_file(ip, port, outfile, fps=30):
-
     logger.debug(f'Streaming {ip}:{port} into {outfile}')
     
-    should_loop = threading.Event()
+    should_stream = new_event()
+    should_stream.set()
+
     def stream_loop():
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((ip, port))
-            should_loop.set()
+        with STREAM_LOCK:
+            frames = iter_frames(ip, port)
 
             writer = None
             try:
-                while should_loop.is_set():
-                    jpeg_data = recv_frame(s)
+                while should_stream.is_set():
+                    jpeg_data = next(frames)
+
                     if jpeg_data is None:
                         logger.info("Stream loop terminated due to disconnected or bad frame.")
                         break
@@ -133,7 +189,7 @@ def stream_to_file(ip, port, outfile, fps=30):
 
     thread = threading.Thread(target=stream_loop)
     thread.start()
-    return should_loop
+    return should_stream
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Stream JPEG frames from socket and save to video.")
