@@ -5,7 +5,7 @@ VENV ?= "${HOME}/.platformio/penv/"
 PIO_ENV ?= esp32cam
 
 
-.PHONY: help build upload monitor clean requirements
+.PHONY: help build upload monitor clean requirements gitcreds
 
 SHELL := /bin/bash
 
@@ -36,3 +36,9 @@ clean:
 requirements:
 	source "$(VENV)/bin/activate"	&& \
 	pip install jupyter opencv-python
+
+
+gitcreds:
+	@echo "echo SSH Commands:"
+	@echo 'eval "$$(ssh-agent -s)" ; '
+	@echo 'ssh-add .secret/.ssh/id_gh_esp32_hp ; '
